@@ -1,0 +1,110 @@
+---
+title: "Simple Time Series Analysis Example"
+author: "Venkat"
+date: "3/25/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Simple Analysis of the AirPassengers dataset in R.
+
+```{r}
+library(IRdisplay)
+library(magrittr)
+library(scales)
+library(gridExtra)
+library(forecast)
+library(tseries)
+library(ggthemes)
+library(ggplot2)
+```
+
+## Load the data 
+
+
+
+```{r}
+data(AirPassengers)
+head(AirPassengers);dim(AirPassengers)
+
+plot(AirPassengers)
+```
+Note that the Plot shows a definite cyclycal pattern
+
+
+## Check for Stationarity
+Option 1: Use ACF Plots
+```{r}
+g1 <- ggAcf(AirPassengers,type="correlation") + ggtitle("Autocorrelation Function ACF") + xlab("Lag") + ylab("ACF")
+g2 <- ggAcf(AirPassengers,type="partial") + ggtitle("Partial Autocorrelation PACF Plot")  + xlab("Lag") + ylab("PACF")
+grid.arrange(g1,g2)
+```
+Option 2: Use Augmented Dickie Fuller Test
+```{r}
+adf.test(AirPassengers)
+```
+Note a p-value of 0.01 indicates we REJECT the NULL Hypothesis that the data is Non-Stationary.
+
+I.E. (double negatives!!!) - the data is STATIONARY
+
+
+
+## Fitting models
+
+Will try 3 models ARMA, ARIMA and STL.
+Expecting that the ARIMA model will not do so well - since the data is Stationary, theoretically no Differencing should be needed. Interested to see how STL stacks up with ARMA
+
+
+
+```{r}
+#fit ARMA model
+arma.model <- auto.arima(AirPassengers, max.d=0)
+arma.model
+
+#fit ARIMA model
+arima.model <- auto.arima(AirPassengers)
+arima.model
+
+#fit STL model
+  #1 - first transform the data to a time series
+ap.ts <- ts(AirPassengers,frequency=12)
+
+  #2 - fit a model
+stl.model <- stl(ap.ts,s.window="periodic")
+autoplot(stl.model)
+
+```
+
+## Plot residuals for ARMA and ARIMA model
+```{r}
+
+arma.resid <- resid(arma.model)
+arima.resid <- resid(arima.model)
+
+
+g1 <- autoplot(arma.resid)
+g2 <- autoplot(arima.resid)
+grid.arrange(g1,g2)
+```
+
+## Compare the forecasts of each model
+
+```{r}
+#forecasting for 2 years. 80% confidence
+arma.forecast <- forecast(arma.model,h=24,level=80)
+arima.forecast <- forecast(arima.model,h=24,level=80)
+stl.forecast <- forecast(stl.model, h=24, level=80)
+
+g1 <- autoplot(arma.forecast)
+g2 <- autoplot(arima.forecast)
+g3 <- autoplot(stl.forecast)
+grid.arrange(g1,g2,g3)
+```
+## Conclusion
+No difference between the ARMA and ARIMA Models (expected as the data is stationary)
+STL performed poorer that I had expected
